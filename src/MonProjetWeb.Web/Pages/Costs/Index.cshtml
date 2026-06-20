@@ -1,0 +1,163 @@
+@page "/Costs"
+@model MonProjetWeb.Web.Pages.Costs.IndexModel
+@{
+    ViewData["Title"] = "Analyse des coûts";
+    ViewData["Page"]  = "Costs";
+}
+
+<!-- Filtre dates -->
+<div class="card border-0 shadow-sm rounded-3 p-4 mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold">Date de début</label>
+            <input type="date" name="startDate" class="form-control"
+                   value="@Model.StartDate.ToString("yyyy-MM-dd")"/>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold">Date de fin</label>
+            <input type="date" name="endDate" class="form-control"
+                   value="@Model.EndDate.ToString("yyyy-MM-dd")"/>
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-search me-1"></i> Filtrer
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- KPI -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Coût total période</p>
+            <h3 class="fw-bold text-primary">$@Model.TotalCost.ToString("N2")</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Nombre de services</p>
+            <h3 class="fw-bold text-info">@Model.Costs.Count</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Coût moyen / service</p>
+            <h3 class="fw-bold text-success">
+                $@(Model.Costs.Any() ? (Model.TotalCost / Model.Costs.Count).ToString("N2") : "0.00")
+            </h3>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-7">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-bar-chart-fill text-primary me-2"></i>Évolution mensuelle
+            </h6>
+            <canvas id="monthlyChart" height="120"></canvas>
+        </div>
+    </div>
+    <div class="col-xl-5">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-pie-chart-fill text-info me-2"></i>Répartition
+            </h6>
+            <canvas id="serviceChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Tableau des coûts -->
+<div class="card border-0 shadow-sm rounded-3 p-4">
+    <h6 class="fw-semibold mb-3">
+        <i class="bi bi-table text-secondary me-2"></i>Détail par service
+    </h6>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Service</th>
+                    <th>Service ID</th>
+                    <th>Région</th>
+                    <th>Période</th>
+                    <th class="text-end">Montant</th>
+                    <th class="text-end">% du total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model.Costs)
+                {
+                    var pct = Model.TotalCost > 0
+                        ? (c.Amount / Model.TotalCost * 100).ToString("N1")
+                        : "0";
+                    <tr>
+                        <td>
+                            <i class="bi bi-cloud-fill text-primary me-1"></i>
+                            <strong>@c.ServiceName</strong>
+                        </td>
+                        <td><code class="small">@c.ServiceId</code></td>
+                        <td>@(string.IsNullOrEmpty(c.Region) ? "—" : c.Region)</td>
+                        <td class="small text-muted">
+                            @c.PeriodStart.ToString("dd/MM") — @c.PeriodEnd.ToString("dd/MM/yyyy")
+                        </td>
+                        <td class="text-end fw-bold text-primary">$@c.Amount.ToString("N2")</td>
+                        <td class="text-end">
+                            <span class="badge bg-primary bg-opacity-10 text-primary">@pct%</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <td colspan="4"><strong>Total</strong></td>
+                    <td class="text-end fw-bold text-primary">$@Model.TotalCost.ToString("N2")</td>
+                    <td class="text-end"><span class="badge bg-primary">100%</span></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const monthlyLabels = @Html.Raw(Model.MonthlyLabels);
+const monthlyData   = @Html.Raw(Model.MonthlyData);
+const serviceLabels = @Html.Raw(Model.ServiceLabels);
+const serviceData   = @Html.Raw(Model.ServiceData);
+const colors = ['#1976d2','#388e3c','#f57c00','#7b1fa2','#0097a7','#c62828','#558b2f','#ad1457'];
+
+new Chart(document.getElementById('monthlyChart'), {
+    type: 'line',
+    data: {
+        labels: monthlyLabels,
+        datasets: [{
+            label: 'Coût USD',
+            data: monthlyData,
+            borderColor: '#1976d2',
+            backgroundColor: 'rgba(25,118,210,0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } }
+    }
+});
+
+new Chart(document.getElementById('serviceChart'), {
+    type: 'doughnut',
+    data: {
+        labels: serviceLabels,
+        datasets: [{ data: serviceData, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+});
+</script>
+}

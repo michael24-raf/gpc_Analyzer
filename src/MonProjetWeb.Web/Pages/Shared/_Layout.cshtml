@@ -1,0 +1,162 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>@ViewData["Title"] — GCP Cost Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet"/>
+    <style>
+        body { background: #f0f2f5; }
+
+        .sidebar {
+            width: 250px;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #1a237e 0%, #283593 100%);
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 100;
+            padding-top: 1rem;
+        }
+
+        .sidebar .brand {
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 1rem 1.5rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.75);
+            padding: .75rem 1.5rem;
+            border-radius: 0;
+            transition: all .2s;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(255,255,255,0.15);
+            border-left: 3px solid #64b5f6;
+        }
+
+        .sidebar .nav-link i { margin-right: .6rem; }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: .75rem 2rem;
+            margin-left: 250px;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: transform .2s;
+        }
+
+        .stat-card:hover { transform: translateY(-3px); }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .chart-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .badge-severity-low      { background: #c8e6c9; color: #2e7d32; }
+        .badge-severity-medium   { background: #fff9c4; color: #f57f17; }
+        .badge-severity-high     { background: #ffe0b2; color: #e65100; }
+        .badge-severity-critical { background: #ffcdd2; color: #b71c1c; }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+    <div class="brand">
+        <i class="bi bi-cloud-fill text-info"></i> GCP Analyzer
+    </div>
+    <ul class="nav flex-column mt-2">
+        <li class="nav-item">
+            <a class="nav-link @(ViewData["Page"]?.ToString() == "Dashboard" ? "active" : "")"
+               href="/Dashboard">
+                <i class="bi bi-speedometer2"></i> Tableau de bord
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ViewData["Page"]?.ToString() == "Costs" ? "active" : "")"
+               href="/Costs">
+                <i class="bi bi-currency-dollar"></i> Coûts
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ViewData["Page"]?.ToString() == "Budgets" ? "active" : "")"
+               href="/Budgets">
+                <i class="bi bi-wallet2"></i> Budgets
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ViewData["Page"]?.ToString() == "Alerts" ? "active" : "")"
+               href="/Alerts">
+                <i class="bi bi-bell"></i> Alertes
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(ViewData["Page"]?.ToString() == "Recommendations" ? "active" : "")"
+               href="/Recommendations">
+                <i class="bi bi-lightbulb"></i> Recommandations
+            </a>
+        </li>
+    </ul>
+    <div style="position:absolute;bottom:1rem;left:0;right:0;padding:1rem 1.5rem;">
+        <a href="/Auth/Login" class="btn btn-outline-light btn-sm w-100">
+            <i class="bi bi-box-arrow-left"></i> Déconnexion
+        </a>
+    </div>
+</nav>
+
+<!-- Topbar -->
+<div class="topbar d-flex justify-content-between align-items-center">
+    <h5 class="mb-0 fw-semibold text-dark">@ViewData["Title"]</h5>
+    <div class="d-flex align-items-center gap-3">
+        <span class="text-muted small">
+            <i class="bi bi-clock"></i>
+            Mis à jour : @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+        </span>
+        <span class="badge bg-success">
+            <i class="bi bi-circle-fill" style="font-size:.5rem"></i> Connecté
+        </span>
+    </div>
+</div>
+
+<!-- Contenu principal -->
+<main class="main-content">
+    @RenderBody()
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

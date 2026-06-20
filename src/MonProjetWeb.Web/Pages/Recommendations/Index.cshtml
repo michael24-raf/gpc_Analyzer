@@ -1,0 +1,116 @@
+@page "/Recommendations"
+@model MonProjetWeb.Web.Pages.Recommendations.IndexModel
+@{
+    ViewData["Title"] = "Recommandations";
+    ViewData["Page"]  = "Recommendations";
+}
+
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- KPI -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">En attente</p>
+            <h3 class="fw-bold text-warning">@Model.PendingCount</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Économies potentielles</p>
+            <h3 class="fw-bold text-success">$@Model.TotalSavings.ToString("N2")</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Total recommandations</p>
+            <h3 class="fw-bold">@Model.Recommendations.Count</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="d-flex justify-content-end mb-3">
+    <form method="post" asp-page-handler="Generate">
+        <button type="submit" class="btn btn-warning">
+            <i class="bi bi-lightbulb me-1"></i> Générer les recommandations
+        </button>
+    </form>
+</div>
+
+<!-- Liste -->
+<div class="card border-0 shadow-sm rounded-3 p-4">
+    <h6 class="fw-semibold mb-3">
+        <i class="bi bi-lightbulb-fill text-warning me-2"></i>Toutes les recommandations
+    </h6>
+    @if (Model.Recommendations.Any())
+    {
+        <div class="row g-3">
+            @foreach (var r in Model.Recommendations)
+            {
+                var typeIcon = r.Type.ToString() switch {
+                    "UnusedResource"    => "bi-trash text-danger",
+                    "CapacityReduction" => "bi-arrows-collapse text-warning",
+                    "VmOptimization"    => "bi-cpu text-info",
+                    _                   => "bi-lightbulb text-warning"
+                };
+                var statusBadge = r.Status.ToString() switch {
+                    "Pending"   => "warning",
+                    "Applied"   => "success",
+                    "Dismissed" => "secondary",
+                    _           => "secondary"
+                };
+                <div class="col-md-6">
+                    <div class="card border-0 bg-light rounded-3 p-3 h-100">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex gap-2 align-items-center">
+                                <i class="bi @typeIcon fs-5"></i>
+                                <span class="fw-semibold small">@r.Title</span>
+                            </div>
+                            <span class="badge bg-@statusBadge">@r.Status</span>
+                        </div>
+                        <p class="text-muted small mb-2">@r.Description</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-success fw-semibold small">
+                                <i class="bi bi-piggy-bank me-1"></i>
+                                Économie : $@r.EstimatedSavings.ToString("N2")
+                            </span>
+                            @if (r.Status == RecommendationStatus.Pending)
+                            {
+                                <div class="d-flex gap-1">
+                                    <form method="post" asp-page-handler="Apply">
+                                        <input type="hidden" name="recId" value="@r.Id"/>
+                                        <button type="submit" class="btn btn-sm btn-success"
+                                                title="Appliquer">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Dismiss">
+                                        <input type="hidden" name="recId" value="@r.Id"/>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                title="Ignorer">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-lightbulb fs-2"></i>
+            <p class="mt-2">Aucune recommandation. Cliquez sur "Générer".</p>
+        </div>
+    }
+</div>

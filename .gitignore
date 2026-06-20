@@ -1,0 +1,17 @@
+# Secrets GCP — NE JAMAIS COMMITER
+src/MonProjetWeb.Web/secrets/
+*.json.key
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Logs
+*.log
+logs/
+
+# Environnement
+appsettings.Production.json

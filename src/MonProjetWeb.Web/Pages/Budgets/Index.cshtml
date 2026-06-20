@@ -1,0 +1,167 @@
+@page "/Budgets"
+@model MonProjetWeb.Web.Pages.Budgets.IndexModel
+@{
+    ViewData["Title"] = "Gestion des budgets";
+    ViewData["Page"]  = "Budgets";
+}
+
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-x-circle me-2"></i>@Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- KPI -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Total budgets</p>
+            <h3 class="fw-bold">@Model.Budgets.Count</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Budgets dépassés</p>
+            <h3 class="fw-bold text-danger">@Model.ExceededBudgets.Count</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Budget total alloué</p>
+            <h3 class="fw-bold text-primary">$@Model.Budgets.Sum(b => b.Amount).ToString("N2")</h3>
+        </div>
+    </div>
+</div>
+
+<!-- Bouton créer -->
+<div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+        <i class="bi bi-plus-circle me-1"></i> Nouveau budget
+    </button>
+</div>
+
+<!-- Liste budgets -->
+<div class="card border-0 shadow-sm rounded-3 p-4">
+    <h6 class="fw-semibold mb-3">
+        <i class="bi bi-wallet2 text-info me-2"></i>Tous les budgets
+    </h6>
+    @if (Model.Budgets.Any())
+    {
+        <div class="row g-3">
+            @foreach (var b in Model.Budgets)
+            {
+                var pct   = b.Amount > 0 ? (int)(b.SpentAmount / b.Amount * 100) : 0;
+                var color = pct >= 100 ? "danger" : pct >= 80 ? "warning" : "success";
+                <div class="col-md-6">
+                    <div class="card border-0 bg-light rounded-3 p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="fw-semibold mb-0">@b.Name</h6>
+                                <small class="text-muted">
+                                    @b.PeriodStart.ToString("dd/MM/yyyy") —
+                                    @b.PeriodEnd.ToString("dd/MM/yyyy")
+                                </small>
+                            </div>
+                            <span class="badge bg-@color">@pct%</span>
+                        </div>
+                        <div class="progress mb-2" style="height:10px">
+                            <div class="progress-bar bg-@color"
+                                 style="width:@(Math.Min(pct,100))%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                $@b.SpentAmount.ToString("N0") / $@b.Amount.ToString("N0") @b.Currency
+                            </small>
+                            <form method="post" asp-page-handler="Delete"
+                                  onsubmit="return confirm('Supprimer ce budget ?')">
+                                <input type="hidden" name="budgetId" value="@b.Id"/>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-bell"></i>
+                                Alerte à @b.AlertThreshold% 
+                                ($@((b.Amount * b.AlertThreshold / 100).ToString("N0")))
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-wallet2 fs-2"></i>
+            <p class="mt-2">Aucun budget configuré. Créez votre premier budget.</p>
+        </div>
+    }
+</div>
+
+<!-- Modal création -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle text-primary me-2"></i>Nouveau budget
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="Create">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nom du budget</label>
+                        <input type="text" name="name" class="form-control"
+                               placeholder="Ex: Budget Production" required/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Montant (USD)</label>
+                        <input type="number" name="amount" class="form-control"
+                               placeholder="5000" step="0.01" min="1" required/>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-semibold">Début</label>
+                            <input type="date" name="periodStart" class="form-control"
+                                   value="@DateTime.UtcNow.ToString("yyyy-MM-01")" required/>
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-semibold">Fin</label>
+                            <input type="date" name="periodEnd" class="form-control"
+                                   value="@DateTime.UtcNow.AddMonths(1).ToString("yyyy-MM-01")" required/>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Seuil d'alerte : <span id="thresholdVal">80</span>%
+                        </label>
+                        <input type="range" name="alertThreshold" class="form-range"
+                               min="50" max="100" value="80"
+                               oninput="document.getElementById('thresholdVal').textContent=this.value"/>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i> Créer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

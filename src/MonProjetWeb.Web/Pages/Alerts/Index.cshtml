@@ -1,0 +1,140 @@
+@page "/Alerts"
+@model MonProjetWeb.Web.Pages.Alerts.IndexModel
+@{
+    ViewData["Title"] = "Alertes";
+    ViewData["Page"]  = "Alerts";
+}
+
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>@Model.SuccessMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- KPI -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Total alertes</p>
+            <h3 class="fw-bold">@Model.TotalCount</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Alertes actives</p>
+            <h3 class="fw-bold text-danger">@Model.ActiveCount</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 p-4">
+            <p class="text-muted small mb-1">Résolues</p>
+            <h3 class="fw-bold text-success">
+                @Model.Alerts.Count(a => a.Status == MonProjetWeb.Domain.Entities.AlertStatus.Resolved)
+            </h3>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="d-flex justify-content-end mb-3">
+    <form method="post" asp-page-handler="Detect">
+        <button type="submit" class="btn btn-warning">
+            <i class="bi bi-search me-1"></i> Détecter les anomalies
+        </button>
+    </form>
+</div>
+
+<!-- Liste alertes -->
+<div class="card border-0 shadow-sm rounded-3 p-4">
+    <h6 class="fw-semibold mb-3">
+        <i class="bi bi-bell-fill text-danger me-2"></i>Toutes les alertes
+    </h6>
+    @if (Model.Alerts.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Sévérité</th>
+                        <th>Titre</th>
+                        <th>Message</th>
+                        <th>Statut</th>
+                        <th>Date</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in Model.Alerts)
+                    {
+                        var sevColor = a.Severity.ToString() switch {
+                            "Critical" => "danger",
+                            "High"     => "orange",
+                            "Medium"   => "warning",
+                            _          => "secondary"
+                        };
+                        var statusColor = a.Status.ToString() switch {
+                            "Active"       => "danger",
+                            "Acknowledged" => "warning",
+                            "Resolved"     => "success",
+                            _              => "secondary"
+                        };
+                        <tr>
+                            <td>
+                                <span class="badge bg-@(a.Severity == MonProjetWeb.Domain.Entities.AlertSeverity.Critical ? "danger" : a.Severity == MonProjetWeb.Domain.Entities.AlertSeverity.High ? "warning" : "secondary")">
+                                    @a.Severity
+                                </span>
+                            </td>
+                            <td><strong>@a.Title</strong></td>
+                            <td class="small text-muted" style="max-width:300px">
+                                @a.Message.Substring(0, Math.Min(100, a.Message.Length))
+                                @(a.Message.Length > 100 ? "..." : "")
+                            </td>
+                            <td>
+                                <span class="badge bg-@statusColor bg-opacity-75">@a.Status</span>
+                            </td>
+                            <td class="small text-muted">
+                                @a.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td class="text-center">
+                                @if (a.Status == MonProjetWeb.Domain.Entities.AlertStatus.Active)
+                                {
+                                    <form method="post" asp-page-handler="Acknowledge"
+                                          class="d-inline">
+                                        <input type="hidden" name="alertId" value="@a.Id"/>
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-warning me-1"
+                                                title="Acquitter">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Resolve"
+                                          class="d-inline">
+                                        <input type="hidden" name="alertId" value="@a.Id"/>
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-success"
+                                                title="Résoudre">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-check-circle-fill text-success fs-2"></i>
+            <p class="mt-2">Aucune alerte. Tout va bien !</p>
+        </div>
+    }
+</div>
