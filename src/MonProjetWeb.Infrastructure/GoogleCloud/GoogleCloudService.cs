@@ -13,36 +13,49 @@ public class GoogleCloudService : IGoogleCloudService
     private readonly IConfiguration _config;
     private readonly ILogger<GoogleCloudService> _logger;
     private readonly string _serviceAccountPath;
+    private readonly BigQueryBillingService _bigQuery;
     private readonly string _projectId;
 
-    public GoogleCloudService(IConfiguration config, ILogger<GoogleCloudService> logger)
-    {
-        _config             = config;
-        _logger             = logger;
-        _serviceAccountPath = _config["GoogleCloud:ServiceAccountPath"]!;
-        _projectId          = _config["GoogleCloud:ProjectId"]!;
-    }
+   public GoogleCloudService(
+    IConfiguration config,
+    ILogger<GoogleCloudService> logger,
+    BigQueryBillingService bigQuery)
+{
+    _config             = config;
+    _logger             = logger;
+    _serviceAccountPath = _config["GoogleCloud:ServiceAccountPath"]!;
+    _projectId          = _config["GoogleCloud:ProjectId"]!;
+    _bigQuery           = bigQuery;
+}
 
     public async Task<List<GcpCostDto>> GetCostsByServiceAsync(
-        string billingAccountId, DateTime startDate, DateTime endDate)
+    string billingAccountId, DateTime startDate, DateTime endDate)
+{
+    try
     {
-        try
-        {
-            _logger.LogInformation(
-                "Récupération des coûts du {Start} au {End} pour {Account}",
-                startDate, endDate, billingAccountId);
+        _logger.LogInformation(
+            "Récupération des coûts du {Start} au {End}", startDate, endDate);
 
-            // Note : Cloud Billing Export utilise BigQuery en production.
-            // Ici on simule avec des données réalistes pour le développement.
-            // En production, remplacer par une requête BigQuery sur billing export.
-            return await SimulateCostsByServiceAsync(startDate, endDate);
-        }
-        catch (Exception ex)
+        // Essayer BigQuery en premier (vraies données)
+        var isAvailable = await _bigQuery.IsDataAvailableAsync();
+        if (isAvailable)
         {
-            _logger.LogError(ex, "Erreur lors de la récupération des coûts GCP");
-            throw;
+            _logger.LogInformation("Utilisation des données BigQuery réelles");
+            var realCosts = await _bigQuery.GetRealCostsByServiceAsync(
+                startDate, endDate);
+            if (realCosts.Any()) return realCosts;
         }
+
+        // Fallback sur données simulées
+        _logger.LogInformation("Utilisation des données simulées");
+        return await SimulateCostsByServiceAsync(startDate, endDate);
     }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Erreur lors de la récupération des coûts GCP");
+        return await SimulateCostsByServiceAsync(startDate, endDate);
+    }
+}
 
     public async Task<List<GcpCostDto>> GetMonthlyCostsAsync(
         string billingAccountId, int months = 6)

@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
 
         // Google Cloud
+        services.AddScoped<BigQueryBillingService>();
         services.AddScoped<IGoogleCloudService, GoogleCloudService>();
         services.AddScoped<IBillingService,     BillingService>();
 
