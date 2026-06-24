@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Configuration;
 using MonProjetWeb.Application.Common.Interfaces.Services;
 using MonProjetWeb.Domain.Entities;
 
@@ -8,10 +9,15 @@ namespace MonProjetWeb.Web.Pages.Budgets;
 public class IndexModel : PageModel
 {
     private readonly IBudgetService _budgetService;
+    private readonly IConfiguration _config;
     private const int GcpAccountId = 1;
+    private string BillingAccountId => _config["GoogleCloud:BillingAccountId"]!;
 
-    public IndexModel(IBudgetService budgetService)
-        => _budgetService = budgetService;
+    public IndexModel(IBudgetService budgetService, IConfiguration config)
+    {
+        _budgetService = budgetService;
+        _config        = config;
+    }
 
     public List<Budget> Budgets         { get; set; } = new();
     public List<Budget> ExceededBudgets { get; set; } = new();
@@ -21,9 +27,9 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        var budgets  = await _budgetService.GetBudgetsAsync(GcpAccountId);
-        Budgets      = budgets.ToList();
-        var exceeded = await _budgetService.GetExceededBudgetsAsync(GcpAccountId);
+        var budgets     = await _budgetService.GetBudgetsAsync(GcpAccountId);
+        Budgets         = budgets.ToList();
+        var exceeded    = await _budgetService.GetExceededBudgetsAsync(GcpAccountId);
         ExceededBudgets = exceeded.ToList();
     }
 
@@ -37,10 +43,7 @@ public class IndexModel : PageModel
                 GcpAccountId, name, amount, periodStart, periodEnd, alertThreshold);
             SuccessMessage = $"Budget '{name}' créé avec succès.";
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = ex.Message;
-        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
         return RedirectToPage();
     }
 
@@ -51,10 +54,18 @@ public class IndexModel : PageModel
             await _budgetService.DeleteBudgetAsync(budgetId);
             SuccessMessage = "Budget supprimé.";
         }
-        catch (Exception ex)
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostSyncAsync()
+    {
+        try
         {
-            ErrorMessage = ex.Message;
+            await _budgetService.SyncBudgetsFromGcpAsync(GcpAccountId, BillingAccountId);
+            SuccessMessage = "✅ Budgets synchronisés avec les coûts réels.";
         }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
         return RedirectToPage();
     }
 }

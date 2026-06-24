@@ -43,7 +43,13 @@
 </div>
 
 <!-- Bouton créer -->
-<div class="d-flex justify-content-end mb-3">
+<!-- Boutons -->
+<div class="d-flex justify-content-end gap-2 mb-3">
+    <form method="post" asp-page-handler="Sync">
+        <button type="submit" class="btn btn-info text-white">
+            <i class="bi bi-arrow-repeat me-1"></i> Sync GCP
+        </button>
+    </form>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
         <i class="bi bi-plus-circle me-1"></i> Nouveau budget
     </button>
