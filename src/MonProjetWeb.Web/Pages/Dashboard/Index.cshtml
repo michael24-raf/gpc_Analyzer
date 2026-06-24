@@ -5,7 +5,6 @@
     ViewData["Page"]  = "Dashboard";
 }
 
-@* Messages *@
 @if (Model.SuccessMessage != null)
 {
     <div class="alert alert-success alert-dismissible fade show">
@@ -21,37 +20,32 @@
     </div>
 }
 
-@* ── Barre d'actions ──────────────────────────────────────────────────── *@
+<!-- Actions rapides -->
 <div class="card border-0 shadow-sm rounded-3 p-3 mb-4">
     <div class="d-flex flex-wrap gap-2 align-items-center">
         <span class="fw-semibold text-muted me-2">
             <i class="bi bi-lightning-fill text-warning"></i> Actions rapides :
         </span>
-
         <form method="post" asp-page-handler="SyncGcp" class="d-inline">
             <button type="submit" class="btn btn-primary btn-sm">
                 <i class="bi bi-cloud-download me-1"></i> Synchroniser GCP
             </button>
         </form>
-
         <form method="post" asp-page-handler="SyncBudgets" class="d-inline">
             <button type="submit" class="btn btn-info btn-sm text-white">
                 <i class="bi bi-wallet2 me-1"></i> Sync Budgets
             </button>
         </form>
-
         <form method="post" asp-page-handler="CheckAlerts" class="d-inline">
             <button type="submit" class="btn btn-warning btn-sm">
                 <i class="bi bi-bell me-1"></i> Vérifier Budgets
             </button>
         </form>
-
         <form method="post" asp-page-handler="DetectAnomalies" class="d-inline">
             <button type="submit" class="btn btn-danger btn-sm">
                 <i class="bi bi-search me-1"></i> Détecter Anomalies
             </button>
         </form>
-
         <form method="post" asp-page-handler="GenerateRecommendations" class="d-inline">
             <button type="submit" class="btn btn-success btn-sm">
                 <i class="bi bi-lightbulb me-1"></i> Générer Recommandations
@@ -60,4 +54,268 @@
     </div>
 </div>
 
-@* ── KPI Cards ── *@
+<!-- KPI Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card p-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-muted small mb-1">Coût total (mois)</p>
+                    <h3 class="fw-bold mb-0">$@Model.TotalCost.ToString("N2")</h3>
+                    <span class="text-muted small">USD</span>
+                </div>
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card p-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-muted small mb-1">Économies potentielles</p>
+                    <h3 class="fw-bold mb-0 text-success">$@Model.PotentialSavings.ToString("N2")</h3>
+                    <span class="text-muted small">Estimation 15%</span>
+                </div>
+                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-piggy-bank"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card p-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-muted small mb-1">Alertes actives</p>
+                    <h3 class="fw-bold mb-0 text-danger">@Model.ActiveAlertCount</h3>
+                    <span class="text-muted small">À traiter</span>
+                </div>
+                <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card p-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-muted small mb-1">Anomalies détectées</p>
+                    <h3 class="fw-bold mb-0 text-warning">@Model.AnomaliesCount</h3>
+                    <span class="text-muted small">Ce mois</span>
+                </div>
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-8">
+        <div class="card chart-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-semibold mb-0">
+                    <i class="bi bi-bar-chart-fill text-primary me-2"></i>
+                    Coûts mensuels (6 mois)
+                </h6>
+            </div>
+            <canvas id="monthlyChart" height="100"></canvas>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card chart-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-semibold mb-0">
+                    <i class="bi bi-pie-chart-fill text-info me-2"></i>
+                    Répartition par service
+                </h6>
+            </div>
+            <canvas id="serviceChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Top Services + Alertes -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-6">
+        <div class="card chart-card p-4">
+            <h6 class="fw-semibold mb-3">
+                <i class="bi bi-trophy-fill text-warning me-2"></i>
+                Top services GCP
+            </h6>
+            @if (Model.TopServices.Any())
+            {
+                @foreach (var svc in Model.TopServices)
+                {
+                    var max = Model.TopServices.Max(s => s.Amount);
+                    var pct = max > 0 ? (int)(svc.Amount / max * 100) : 0;
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small fw-medium">@svc.ServiceName</span>
+                            <span class="small text-muted">$@svc.Amount.ToString("N2")</span>
+                        </div>
+                        <div class="progress" style="height:8px">
+                            <div class="progress-bar bg-primary" style="width:@pct%"></div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted small">Aucune donnée. Cliquez sur "Synchroniser GCP".</p>
+            }
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card chart-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-semibold mb-0">
+                    <i class="bi bi-bell-fill text-danger me-2"></i>
+                    Alertes actives
+                </h6>
+                <a href="/Alerts" class="btn btn-sm btn-outline-danger">Voir tout</a>
+            </div>
+            @if (Model.ActiveAlerts.Any())
+            {
+                @foreach (var alert in Model.ActiveAlerts)
+                {
+                    var badgeClass = alert.Severity.ToString().ToLower();
+                    <div class="d-flex align-items-start gap-2 mb-3 p-2 rounded bg-light">
+                        <span class="badge badge-severity-@badgeClass mt-1">
+                            @alert.Severity
+                        </span>
+                        <div>
+                            <div class="small fw-medium">@alert.Title</div>
+                            <div class="text-muted" style="font-size:.78rem">
+                                @alert.Message.Substring(0, Math.Min(80, alert.Message.Length))...
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-check-circle-fill text-success fs-3"></i>
+                    <p class="mt-2 mb-0">Aucune alerte active</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Budgets + Recommandations -->
+<div class="row g-4">
+    <div class="col-xl-6">
+        <div class="card chart-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-semibold mb-0">
+                    <i class="bi bi-wallet2 text-info me-2"></i>
+                    Budgets
+                </h6>
+                <a href="/Budgets" class="btn btn-sm btn-outline-info">Gérer</a>
+            </div>
+            @if (Model.Budgets.Any())
+            {
+                @foreach (var b in Model.Budgets)
+                {
+                    var pct   = b.Amount > 0 ? (int)(b.SpentAmount / b.Amount * 100) : 0;
+                    var color = pct >= 100 ? "danger" : pct >= 80 ? "warning" : "success";
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small fw-medium">@b.Name</span>
+                            <span class="small text-muted">
+                                $@b.SpentAmount.ToString("N0") / $@b.Amount.ToString("N0")
+                                <span class="badge bg-@color ms-1">@pct%</span>
+                            </span>
+                        </div>
+                        <div class="progress" style="height:8px">
+                            <div class="progress-bar bg-@color" style="width:@(Math.Min(pct,100))%"></div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted small">Aucun budget. Allez dans "Budgets" pour en créer.</p>
+            }
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card chart-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-semibold mb-0">
+                    <i class="bi bi-lightbulb-fill text-warning me-2"></i>
+                    Recommandations
+                </h6>
+                <a href="/Recommendations" class="btn btn-sm btn-outline-warning">Voir tout</a>
+            </div>
+            @if (Model.Recommendations.Any())
+            {
+                @foreach (var r in Model.Recommendations)
+                {
+                    <div class="d-flex align-items-start gap-2 mb-3 p-2 rounded bg-light">
+                        <i class="bi bi-arrow-right-circle-fill text-warning mt-1"></i>
+                        <div>
+                            <div class="small fw-medium">@r.Title</div>
+                            <div class="text-success small">
+                                Économie : $@r.EstimatedSavings.ToString("N2")
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted small">Aucune recommandation en attente.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const monthlyLabels = @Html.Raw(Model.MonthlyLabels);
+const monthlyData   = @Html.Raw(Model.MonthlyData);
+const serviceLabels = @Html.Raw(Model.ServiceLabels);
+const serviceData   = @Html.Raw(Model.ServiceData);
+const colors = ['#1976d2','#388e3c','#f57c00','#7b1fa2','#0097a7','#c62828','#558b2f','#ad1457'];
+
+new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+        labels: monthlyLabels,
+        datasets: [{
+            label: 'Coût USD',
+            data: monthlyData,
+            backgroundColor: 'rgba(25, 118, 210, 0.7)',
+            borderColor: '#1976d2',
+            borderWidth: 1,
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } } }
+    }
+});
+
+new Chart(document.getElementById('serviceChart'), {
+    type: 'doughnut',
+    data: {
+        labels: serviceLabels,
+        datasets: [{ data: serviceData, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } } }
+    }
+});
+</script>
+}
