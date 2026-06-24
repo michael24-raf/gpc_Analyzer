@@ -1,3 +1,4 @@
+#pragma warning disable CS0618
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.BigQuery.V2;
 using Microsoft.Extensions.Configuration;
