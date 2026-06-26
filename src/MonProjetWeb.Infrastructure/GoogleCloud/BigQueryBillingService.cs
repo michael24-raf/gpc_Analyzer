@@ -67,9 +67,7 @@ public class BigQueryBillingService
                     SUM(cost) as total_cost,
                     currency
                 FROM `{_projectId}.{_dataset}.gcp_billing_export_v1_*`
-                WHERE DATE(usage_start_time) >= '{startDate:yyyy-MM-dd}'
-                  AND DATE(usage_start_time) <= '{endDate:yyyy-MM-dd}'
-                  AND cost > 0
+                WHERE cost > 0
                 GROUP BY service.description, service.id, currency
                 ORDER BY total_cost DESC";
 
@@ -117,7 +115,7 @@ public class BigQueryBillingService
             var query = $@"
                 SELECT COUNT(*) as cnt
                 FROM `{_projectId}.{_dataset}.gcp_billing_export_v1_*`
-                LIMIT 1";
+                WHERE cost > 0";
 
             var result = await client.ExecuteQueryAsync(query, null);
             foreach (var row in result)
