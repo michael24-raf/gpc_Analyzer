@@ -136,7 +136,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Montant (USD)</label>
                         <input type="number" name="amount" class="form-control"
-                               placeholder="5000" step="0.01" min="1" required/>
+                            placeholder="0.30" step="0.01" min="0.01" required/>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col">
@@ -155,8 +155,8 @@
                             Seuil d'alerte : <span id="thresholdVal">80</span>%
                         </label>
                         <input type="range" name="alertThreshold" class="form-range"
-                               min="50" max="100" value="80"
-                               oninput="document.getElementById('thresholdVal').textContent=this.value"/>
+                            min="1" max="100" value="80"
+                            oninput="document.getElementById('thresholdVal').textContent=this.value"/>
                     </div>
                 </div>
                 <div class="modal-footer">
