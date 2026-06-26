@@ -34,23 +34,22 @@ public class GoogleCloudService : IGoogleCloudService
     {
         try
         {
-            _logger.LogInformation(
-                "Récupération des coûts du {Start} au {End}", startDate, endDate);
-
-            var isAvailable = await _bigQuery.IsDataAvailableAsync();
-            if (isAvailable)
+            // Essayer BigQuery directement
+            var realCosts = await _bigQuery.GetRealCostsByServiceAsync(startDate, endDate);
+            if (realCosts.Any())
             {
-                _logger.LogInformation("Utilisation des données BigQuery réelles");
-                var realCosts = await _bigQuery.GetRealCostsByServiceAsync(startDate, endDate);
-                if (realCosts.Any()) return realCosts;
+                _logger.LogInformation(
+                    "BigQuery : {Count} services récupérés", realCosts.Count);
+                return realCosts;
             }
 
-            _logger.LogInformation("Utilisation des données simulées");
+            // Fallback sur données simulées
+            _logger.LogInformation("BigQuery vide — données simulées");
             return await SimulateCostsByServiceAsync(startDate, endDate);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erreur lors de la récupération des coûts GCP");
+            _logger.LogError(ex, "Erreur — fallback simulé");
             return await SimulateCostsByServiceAsync(startDate, endDate);
         }
     }

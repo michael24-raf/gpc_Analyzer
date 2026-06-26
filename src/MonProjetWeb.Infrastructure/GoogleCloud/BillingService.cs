@@ -41,41 +41,49 @@ public class BillingService : IBillingService
         => await _gcp.GetBudgetsAsync(billingAccountId);
 
     public async Task SyncCostsToDbAsync(int gcpAccountId, string billingAccountId)
+{
+    _logger.LogInformation(
+        "Synchronisation des coûts pour le compte GCP {Id}", gcpAccountId);
+
+    var now   = DateTime.UtcNow;
+    var start = new DateTime(now.Year, now.Month, 1);
+
+    // Essayer BigQuery en premier
+    List<GcpCostDto> costs;
+    var isAvailable = await _gcp.GetCostsByServiceAsync(billingAccountId, start, now);
+    costs = isAvailable;
+
+    // Supprimer les anciens enregistrements du mois en cours
+    var existing = await _db.CostRecords
+        .Where(c => c.GcpAccountId == gcpAccountId
+                 && c.PeriodStart  >= start)
+        .ToListAsync();
+
+    if (existing.Any())
     {
-        _logger.LogInformation(
-            "Synchronisation des coûts pour le compte GCP {Id}", gcpAccountId);
-
-        var now   = DateTime.UtcNow;
-        var start = new DateTime(now.Year, now.Month, 1);
-        var costs = await _gcp.GetCostsByServiceAsync(billingAccountId, start, now);
-
-        foreach (var cost in costs)
-        {
-            // Éviter les doublons
-            var exists = await _db.CostRecords.AnyAsync(c =>
-                c.GcpAccountId == gcpAccountId &&
-                c.ServiceId    == cost.ServiceId &&
-                c.PeriodStart  == cost.PeriodStart);
-
-            if (!exists)
-            {
-                _db.CostRecords.Add(new CostRecord
-                {
-                    GcpAccountId = gcpAccountId,
-                    ServiceName  = cost.ServiceName,
-                    ServiceId    = cost.ServiceId,
-                    Amount       = cost.Amount,
-                    Currency     = cost.Currency,
-                    PeriodStart  = cost.PeriodStart,
-                    PeriodEnd    = cost.PeriodEnd,
-                    Region       = cost.Region,
-                    ResourceName = cost.ResourceName,
-                    CreatedAt    = DateTime.UtcNow
-                });
-            }
-        }
-
+        _db.CostRecords.RemoveRange(existing);
         await _db.SaveChangesAsync();
-        _logger.LogInformation("{Count} enregistrements synchronisés", costs.Count);
     }
+
+    // Insérer les nouveaux
+    foreach (var cost in costs)
+    {
+        _db.CostRecords.Add(new CostRecord
+        {
+            GcpAccountId = gcpAccountId,
+            ServiceName  = cost.ServiceName,
+            ServiceId    = cost.ServiceId,
+            Amount       = cost.Amount,
+            Currency     = cost.Currency,
+            PeriodStart  = cost.PeriodStart,
+            PeriodEnd    = cost.PeriodEnd,
+            Region       = cost.Region,
+            ResourceName = cost.ResourceName,
+            CreatedAt    = DateTime.UtcNow
+        });
+    }
+
+    await _db.SaveChangesAsync();
+    _logger.LogInformation("{Count} enregistrements synchronisés", costs.Count);
+}
 }
