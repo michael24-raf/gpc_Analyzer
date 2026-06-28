@@ -75,7 +75,8 @@ public class AlertService : IAlertService
             var alreadyAlerted = await _alertRepo.AnyAsync(a =>
                 a.GcpAccountId == gcpAccountId &&
                 a.BudgetId     == budget.Id    &&
-                a.Status       == AlertStatus.Active);
+                (a.Status == AlertStatus.Active ||
+                a.Status == AlertStatus.Acknowledged));
 
             if (alreadyAlerted) continue;
 
