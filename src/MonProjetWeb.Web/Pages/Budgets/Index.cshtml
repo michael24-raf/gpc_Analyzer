@@ -85,7 +85,7 @@
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
                             <small class="text-muted">
-                                $@b.SpentAmount.ToString("N0") / $@b.Amount.ToString("N0") @b.Currency
+                                $@b.SpentAmount.ToString("N2") / $@b.Amount.ToString("N2") @b.Currency
                             </small>
                             <form method="post" asp-page-handler="Delete"
                                   onsubmit="return confirm('Supprimer ce budget ?')">
@@ -99,7 +99,7 @@
                             <small class="text-muted">
                                 <i class="bi bi-bell"></i>
                                 Alerte à @b.AlertThreshold% 
-                                ($@((b.Amount * b.AlertThreshold / 100).ToString("N0")))
+                                ($@((b.Amount * b.AlertThreshold / 100).ToString("N2")))
                             </small>
                         </div>
                     </div>
