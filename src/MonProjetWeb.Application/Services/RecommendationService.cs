@@ -66,73 +66,72 @@ public class RecommendationService : IRecommendationService
         await _recRepo.SaveChangesAsync();
     }
 
-    // ── Logique de génération ────────────────────────────────────────────────
-
     private async Task TryAddRecommendation(
-    int gcpAccountId, string service, decimal totalCost)
-{
-    var alreadyExists = await _recRepo.AnyAsync(r =>
-        r.GcpAccountId  == gcpAccountId &&
-        r.ResourceName  == service      &&
-        r.Status        == RecommendationStatus.Pending);
-
-    if (alreadyExists) return;
-
-    // Ressource peu utilisée : coût faible sur la période
-    if (totalCost < 100m)
+        int gcpAccountId, string service, decimal totalCost)
     {
-        await _recRepo.AddAsync(new Recommendation
-        {
-            GcpAccountId     = gcpAccountId,
-            Type             = RecommendationType.UnusedResource,
-            Title            = $"Ressource peu utilisée : {service}",
-            Description      = $"Le service '{service}' a coûté seulement {totalCost:F2} USD. Envisagez sa suppression ou réduction.",
-            ResourceName     = service,
-            EstimatedSavings = totalCost * 0.8m,
-            Currency         = "USD",
-            Status           = RecommendationStatus.Pending,
-            CreatedAt        = DateTime.UtcNow
-        });
-        return;
-    }
+        // Vérifier tous les statuts — éviter les doublons
+        var alreadyExists = await _recRepo.AnyAsync(r =>
+            r.GcpAccountId == gcpAccountId &&
+            r.ResourceName == service);
 
-    // Réduction de capacité : Compute Engine coûteux
-    if (totalCost > 100m && service.Contains("Compute", StringComparison.OrdinalIgnoreCase))
-    {
-        await _recRepo.AddAsync(new Recommendation
-        {
-            GcpAccountId     = gcpAccountId,
-            Type             = RecommendationType.CapacityReduction,
-            Title            = $"Réduction de capacité : {service}",
-            Description      = $"'{service}' représente {totalCost:F2} USD. Réduire la taille des VMs pourrait économiser ~20%.",
-            ResourceName     = service,
-            EstimatedSavings = totalCost * 0.20m,
-            Currency         = "USD",
-            Status           = RecommendationStatus.Pending,
-            CreatedAt        = DateTime.UtcNow
-        });
-        return;
-    }
+        if (alreadyExists) return;
 
-    // Optimisation VM : Kubernetes ou Cloud Run
-    if (totalCost > 100m && (
-        service.Contains("Kubernetes", StringComparison.OrdinalIgnoreCase) ||
-        service.Contains("Cloud Run",  StringComparison.OrdinalIgnoreCase) ||
-        service.Contains("Pub/Sub",    StringComparison.OrdinalIgnoreCase) ||
-        service.Contains("BigQuery",   StringComparison.OrdinalIgnoreCase)))
-    {
-        await _recRepo.AddAsync(new Recommendation
+        // Ressource peu utilisée
+        if (totalCost < 100m)
         {
-            GcpAccountId     = gcpAccountId,
-            Type             = RecommendationType.VmOptimization,
-            Title            = $"Optimisation : {service}",
-            Description      = $"Migrer '{service}' vers des instances réservées ou optimiser la configuration pourrait réduire les coûts de 30%.",
-            ResourceName     = service,
-            EstimatedSavings = totalCost * 0.30m,
-            Currency         = "USD",
-            Status           = RecommendationStatus.Pending,
-            CreatedAt        = DateTime.UtcNow
-        });
+            await _recRepo.AddAsync(new Recommendation
+            {
+                GcpAccountId     = gcpAccountId,
+                Type             = RecommendationType.UnusedResource,
+                Title            = $"Ressource peu utilisée : {service}",
+                Description      = $"Le service '{service}' a coûté seulement {totalCost:F2} USD. Envisagez sa suppression ou réduction.",
+                ResourceName     = service,
+                EstimatedSavings = totalCost * 0.8m,
+                Currency         = "USD",
+                Status           = RecommendationStatus.Pending,
+                CreatedAt        = DateTime.UtcNow
+            });
+            return;
+        }
+
+        // Réduction de capacité : Compute Engine
+        if (totalCost > 100m &&
+            service.Contains("Compute", StringComparison.OrdinalIgnoreCase))
+        {
+            await _recRepo.AddAsync(new Recommendation
+            {
+                GcpAccountId     = gcpAccountId,
+                Type             = RecommendationType.CapacityReduction,
+                Title            = $"Réduction de capacité : {service}",
+                Description      = $"'{service}' représente {totalCost:F2} USD. Réduire la taille des VMs pourrait économiser ~20%.",
+                ResourceName     = service,
+                EstimatedSavings = totalCost * 0.20m,
+                Currency         = "USD",
+                Status           = RecommendationStatus.Pending,
+                CreatedAt        = DateTime.UtcNow
+            });
+            return;
+        }
+
+        // Optimisation VM
+        if (totalCost > 100m && (
+            service.Contains("Kubernetes", StringComparison.OrdinalIgnoreCase) ||
+            service.Contains("Cloud Run",  StringComparison.OrdinalIgnoreCase) ||
+            service.Contains("Pub/Sub",    StringComparison.OrdinalIgnoreCase) ||
+            service.Contains("BigQuery",   StringComparison.OrdinalIgnoreCase)))
+        {
+            await _recRepo.AddAsync(new Recommendation
+            {
+                GcpAccountId     = gcpAccountId,
+                Type             = RecommendationType.VmOptimization,
+                Title            = $"Optimisation : {service}",
+                Description      = $"Migrer '{service}' vers des instances réservées pourrait réduire les coûts de 30%.",
+                ResourceName     = service,
+                EstimatedSavings = totalCost * 0.30m,
+                Currency         = "USD",
+                Status           = RecommendationStatus.Pending,
+                CreatedAt        = DateTime.UtcNow
+            });
+        }
     }
-}
 }
