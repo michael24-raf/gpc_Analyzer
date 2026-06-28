@@ -33,19 +33,33 @@ public class IndexModel : PageModel
         ExceededBudgets = exceeded.ToList();
     }
 
-    public async Task<IActionResult> OnPostCreateAsync(
-        string name, decimal amount, DateTime periodStart,
-        DateTime periodEnd, decimal alertThreshold)
+   public async Task<IActionResult> OnPostCreateAsync(
+    string name, string amount, DateTime periodStart,
+    DateTime periodEnd, string alertThreshold)
+{
+    try
     {
-        try
-        {
-            await _budgetService.CreateBudgetAsync(
-                GcpAccountId, name, amount, periodStart, periodEnd, alertThreshold);
-            SuccessMessage = $"Budget '{name}' créé avec succès.";
-        }
-        catch (Exception ex) { ErrorMessage = ex.Message; }
-        return RedirectToPage();
+        // Conversion culture-invariante
+        var amountDecimal = decimal.Parse(
+            amount.Replace(',', '.'),
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        var thresholdDecimal = decimal.Parse(
+            alertThreshold.Replace(',', '.'),
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        await _budgetService.CreateBudgetAsync(
+            GcpAccountId, name, amountDecimal,
+            periodStart, periodEnd, thresholdDecimal);
+
+        SuccessMessage = $"Budget '{name}' créé avec succès.";
     }
+    catch (Exception ex)
+    {
+        ErrorMessage = ex.Message;
+    }
+    return RedirectToPage();
+}
 
     public async Task<IActionResult> OnPostDeleteAsync(int budgetId)
     {
